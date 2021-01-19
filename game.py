@@ -10,6 +10,7 @@ class Board:
     def __init__(self, matrix=[[" "] * 7 for _ in range(6)]):
         self.matrix = matrix
 
+    # draws board
     def draw(self):
         for row in range(6):
             print("|", end="")
@@ -20,7 +21,8 @@ class Board:
                     print(self.matrix[row][col], end=" ")
             print("|")
         print("\u0305".join(" 1 2 3 4 5 6 7"))
-
+    
+    # draws win screen
     def draw_winner(self, coords, direction):
         x = coords[0]
         y = coords[1]
@@ -59,6 +61,7 @@ class Board:
         print("\u0305".join(" 1 2 3 4 5 6 7"), end="     ")
         print("\u0305".join(" 1 2 3 4 5 6 7"))
 
+    # checks board state for winner
     def check_winner(self):
         for row in range(6):
             for col in range(4):
@@ -100,6 +103,7 @@ class Board:
             return [True, None]
         return [False, None]
 
+    # returns current player
     def current_player(self):
         count = 0
         for row in self.matrix:
@@ -110,6 +114,7 @@ class Board:
             return "X"
         return "O"
 
+    # makes a move based on current player
     def play(self, col):
         i = 5
         col -= 1
@@ -120,6 +125,7 @@ class Board:
         self.matrix[i][col] = self.current_player()
         return True
 
+    # returns list of possible moves
     def legal_moves(self):
         possible_moves = []
         for i in range(7):
@@ -127,6 +133,7 @@ class Board:
                 possible_moves.append(i+1)
         return possible_moves
 
+    # searches for three in a row
     def find_three(self, char):
         for row in range(6):
             for col in range(5):
@@ -297,6 +304,7 @@ class Bot:
         self.char = char
         self.tree = None
 
+    # simulates game randomly based on given state
     def simulate(self, state):
         simboard = Board(state)
         simwinner = simboard.check_winner()
@@ -305,11 +313,13 @@ class Bot:
             simwinner = simboard.check_winner()
         return simwinner
 
+    # makes one move to a given state
     def augment_state(self, state, move):
         simboardd = Board(state)
         simboardd.play(move)
         return simboardd.matrix
 
+    # backpropagates (updates) tree
     def backpropagate(self, node, amount):
         if node.parent == None:
             node.visited += 1
@@ -318,6 +328,7 @@ class Bot:
             node.wins += amount
             self.backpropagate(node.parent, amount)
 
+    # selects next node based off Upper Confidence Bound applied to Trees
     def UBT_select(self, node):
         children = node.children
         child_values = {}
@@ -333,15 +344,18 @@ class Bot:
         val = max(child_values, key=child_values.get)
         return val
 
+    # initializes tree
     def create_tree(self, state):
         self.tree = Node(state)
 
+    # traverse tree until a leaf is reached
     def get_child(self, tree):
         if tree.children == None:
             return tree
         else:
             return self.get_child(self.UBT_select(tree))
 
+    # chooses move based off MCTS
     def select_move(self, iterations):
         for _ in range(iterations):
             cnode = self.get_child(self.tree)
@@ -376,6 +390,7 @@ class Bot:
             print("Bot is not confident")
         return choice.state
 
+    # blocks enemy if they have 3 in a row
     def block(self, state):
         if bot.char == "X":
             player = "O"
@@ -404,6 +419,7 @@ print("Choose a mode:")
 print("    1 - vs AI")
 print("    2 - vs Player")
 mode = 0
+# mode input
 while(not (mode == 1 or mode == 2)):
     try:
         mode = int(input())
@@ -412,11 +428,13 @@ while(not (mode == 1 or mode == 2)):
 
 board = Board()
 
+# vs bot
 if mode == 1:
     print("Choose bot difficulty:")
     print("    1-inf, random-hard")
     print("    the larger the value (>10000), the slower the game")
     diff = 0
+    # iterations input
     while(not (diff >= 1)):
         try:
             diff = int(input())
@@ -426,6 +444,7 @@ if mode == 1:
     print("    1 - X")
     print("    2 - O")
     pchar = 0
+    # player choice X or O
     while(not (pchar == 1 or pchar == 2)):
         try:
             pchar = int(input())
@@ -436,8 +455,11 @@ if mode == 1:
     else:
         bot = Bot("X")
     winner = [False]
+    # main loop
     while(not winner[0]):
+        # bot turn
         if board.current_player() == bot.char:
+            # counters first move
             if(
                 bot.char == "O"
                 and board.matrix == firstmove
@@ -446,6 +468,7 @@ if mode == 1:
                 winner = board.check_winner()
                 print("Bot: First move counter")
                 continue
+            # checks if it can block
             blocktest = bot.block(board.matrix)
             if blocktest[0]:
                 board.play(blocktest[1]+1)
@@ -458,6 +481,7 @@ if mode == 1:
             bot.create_tree(board.matrix)
             board.matrix = bot.select_move(diff)
         else:
+            # player turn
             board.draw()
             print(f"\nCurrent player: {board.current_player()}")
             print("Choose column:")
@@ -465,6 +489,7 @@ if mode == 1:
             while(move < 1 or move > 7):
                 try:
                     move = int(input())
+                    # exit for debugging
                     if move == -1:
                         os._exit(0)
                     if move < 1 or move > 7:
@@ -474,6 +499,7 @@ if mode == 1:
             if not board.play(move):
                 print("Invalid move")
         winner = board.check_winner()
+# player vs player
 else:
     winner = [False]
     while(not winner[0]):
@@ -491,6 +517,7 @@ else:
         if not board.play(move):
             print("Invalid move")
         winner = board.check_winner()
+# draw winning screen
 if winner[1] == None:
     board.draw()
     print("\nDraw!")
